@@ -1,0 +1,6 @@
+{
+  "rust-analyzer.linkedProjects": [
+    "apps/contract/Cargo.toml",
+    "apps/contract/programs/swipe/Cargo.toml"
+  ]
+}
