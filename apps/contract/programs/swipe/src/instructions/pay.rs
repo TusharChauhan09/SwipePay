@@ -19,7 +19,7 @@ pub fn pay_handler(ctx: Context<Pay>, amount: u64) -> Result<()> {
     let fee = amount / 10000;
     let recipient_amount = amount - fee;
 
-    // Transfer to recipient
+    // Transfer to recipientusu``
     invoke(
         &system_instruction::transfer(
             ctx.accounts.sender.key,
