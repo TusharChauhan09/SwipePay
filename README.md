@@ -1,159 +1,157 @@
-# Turborepo starter
+# SwipePay
 
-This Turborepo starter is maintained by the Turborepo core team.
+> Solana-based peer-to-peer payment and bill splitting platform.
 
-## Using this example
+SwipePay lets people send SOL payments and split bills on-chain. The project is a Turborepo monorepo with three tiers — a Go API for off-chain user/split management, a Solana Anchor smart contract for on-chain settlement, and a React Native (Expo) mobile app for the user-facing interface.
 
-Run the following command:
+## Architecture
 
-```sh
-npx create-turbo@latest
+```
+apps/
+├── api/          Go REST server — manages users, splits, participants (PostgreSQL/Neon)
+├── contract/     Solana Anchor smart contract — pay & split_pay instructions
+└── mobile/       Expo / React Native app — mobile frontend (NativeWind, Zustand)
+
+packages/
+├── ui/           Shared React component library (Button, Card, Code)
+├── eslint-config/  Shared ESLint configs
+└── typescript-config/  Shared TSConfig bases
 ```
 
-## What's inside?
+### Data Flow
 
-This Turborepo includes the following packages/apps:
+1. **Mobile app** talks to the **Go API** for user profiles and split metadata.
+2. When a payment is ready to settle, the **mobile app** (or any Solana wallet) submits a transaction to the **smart contract** on-chain.
+3. The **Go API** records the on-chain transaction signature alongside the off-chain split record.
 
-### Apps and Packages
+## Tech Stack
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+| Layer | Technology |
+|-------|-----------|
+| **Monorepo** | Turborepo 2.9, PNPM 9, TypeScript 5.9 |
+| **Backend** | Go 1.26, pgx/v5 (PostgreSQL), sqlc, Neon serverless |
+| **Blockchain** | Solana, Anchor 1.0.1, Rust 1.89 |
+| **Mobile** | Expo SDK 54, React Native 0.81, React 19, NativeWind 4, Zustand 5 |
+| **Linting** | ESLint 9, Prettier 3.7 |
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+## Getting Started
 
-### Utilities
+### Prerequisites
 
-This Turborepo has some additional tools already setup for you:
+- **Node.js** >= 18
+- **pnpm** 9 — `npm install -g pnpm@9`
+- **Go** 1.26+ — [install](https://go.dev/dl/)
+- **Rust** 1.89+ with Solana toolchain — [install](https://docs.anza.xyz/cli/install)
+- **Anchor** 1.0.1 — `cargo install --locked avm && avm install 1.0.1`
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+### Install
 
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
+```bash
+pnpm install
 ```
 
-Without global `turbo`, use your package manager:
+### Database
 
-```sh
-cd my-turborepo
-npx turbo build
-pnpm dlx turbo build
-pnpm exec turbo build
+The Go API connects to a **Neon PostgreSQL** instance. Copy `apps/api/.env.example` (or create `apps/api/.env`) with:
+
+```
+DATABASE_URL=postgresql://user:password@ep-xxx.us-east-2.aws.neon.tech/swipepay?sslmode=require
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+The SQL schema lives in `apps/api/schema/` and typed Go code is generated with sqlc:
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo build --filter=docs
+```bash
+cd apps/api && sqlc generate
 ```
 
-Without global `turbo`:
+### Development
 
-```sh
-npx turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+```bash
+# Start everything in dev mode
+pnpm dev
+
+# Or start individual services
+pnpm dev:api       # Go API with Air live-reload on :8080
+pnpm dev:mobile    # Expo dev server (scan QR with Expo Go)
 ```
 
-### Develop
+### Scripts
 
-To develop all apps and packages, run the following command:
+| Script | Description |
+|--------|-------------|
+| `pnpm build` | Build all apps and packages |
+| `pnpm dev` | Run all workspaces in dev mode |
+| `pnpm lint` | Lint all workspaces |
+| `pnpm format` | Format with Prettier |
+| `pnpm check-types` | Type-check all TypeScript workspaces |
+| `pnpm test` | Run all tests |
+| `pnpm clean` | Remove all build artifacts |
+| `pnpm dev:mobile` | Start mobile app only |
+| `pnpm dev:api` | Start Go API only |
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+## Smart Contract
 
-```sh
-cd my-turborepo
-turbo dev
+The Solana program (`apps/contract/`) supports two instructions:
+
+### `pay`
+Transfers SOL from sender to recipient with a **0.01% fee** (1/10000) routed to a treasury account.
+
+**Accounts:** `sender` (signer), `recipient`, `treasury`, `system_program`
+
+### `split_pay`
+Calculates the total of a multi-party split and transfers the **0.01% fee** from the sender to the treasury.
+
+**Accounts:** `sender` (signer), `treasury`, `system_program`
+
+```bash
+# Run contract tests
+cd apps/contract && anchor test
 ```
 
-Without global `turbo`, use your package manager:
+**Program ID (localnet):** `HZF2gdH6uHJQkYLioXZVGLBinJ2GySXZ7eBN44ti11Us`
 
-```sh
-cd my-turborepo
-npx turbo dev
-pnpm exec turbo dev
-pnpm exec turbo dev
-```
+## API Database Schema
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+### `users`
+| Column | Type | Notes |
+|--------|------|-------|
+| `wallet_address` | TEXT PK | Solana wallet |
+| `username` | TEXT UNIQUE | |
+| `display_name` | TEXT | |
+| `avatar_url` | TEXT? | |
+| `created_at`, `updated_at` | TIMESTAMPTZ | |
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+### `splits`
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID PK | Auto-generated |
+| `creator_wallet` | TEXT FK → users | |
+| `title` | TEXT | |
+| `total_amount` | NUMERIC(20,9) | |
+| `currency` | TEXT | Default `USD` |
+| `tx_signature` | TEXT? | Solana tx hash |
+| `created_at` | TIMESTAMPTZ | |
 
-```sh
-turbo dev --filter=web
-```
+### `split_participants`
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID PK | |
+| `split_id` | UUID FK → splits | |
+| `wallet_address` | TEXT FK → users | |
+| `amount` | NUMERIC(20,9) | |
+| `paid` | BOOLEAN | Default `false` |
+| `created_at` | TIMESTAMPTZ | |
 
-Without global `turbo`:
+## Project Status
 
-```sh
-npx turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
+Early development — core infrastructure is in place (smart contract logic, database schema, build tooling), but the API routing layer and mobile screens are not yet implemented.
 
-### Remote Caching
+- [x] Smart contract payment & split logic
+- [x] Database schema & sqlc codegen
+- [ ] Go API HTTP handlers
+- [ ] Mobile app screens (login, pay, splits)
+- [ ] API ↔ Contract integration
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+## License
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-pnpm exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-pnpm exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+MIT

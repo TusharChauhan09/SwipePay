@@ -16,6 +16,7 @@ pub fn split_pay_handler(ctx: Context<SplitPay>, amounts: Vec<u64>) -> Result<()
     let total: u64 = amounts.iter().sum();
     let fee = total / 10000;
 
+
     // Transfer fee to treasury
     invoke(
         &system_instruction::transfer(
