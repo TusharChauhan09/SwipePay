@@ -13,6 +13,7 @@ import (
 
 	"github.com/TusharChauhan09/SwipePay-api/internal/auth"
 	"github.com/TusharChauhan09/SwipePay-api/internal/db"
+	"github.com/TusharChauhan09/SwipePay-api/internal/profile"
 )
 
 func main() {
@@ -37,7 +38,18 @@ func main() {
 		AllowCredentials: false,
 	}))
 
+	// Public routes
 	r.Post("/auth/verify", auth.VerifyHandler)
+
+	// Public profile lookup
+	profileHandler := profile.NewHandler(pool)  // so inorder not to pass pool everytime 
+	r.Get("/profile/{wallet}",profileHandler.GetProfile)
+	r.Group(func(r chi.Router){
+		r.Use(auth.RequireAuth)
+		r.Post("/profile", profileHandler.CreateProfile)
+		r.Put("/profile", profileHandler.UpdateProfile)
+	})
+
 
 	fmt.Println("SolPay API starting on :8080...")
 	http.ListenAndServe(":8080", r)

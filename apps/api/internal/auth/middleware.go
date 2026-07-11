@@ -34,3 +34,8 @@ func RequireAuth(next http.Handler) http.Handler {
 		next.ServeHTTP(w,r.WithContext(ctx))
 	})
 }
+
+func GetWalletFromContext(r *http.Request) (string, bool){
+	wallet, ok := r.Context().Value(WalletContextKey).(string)
+	return wallet, ok
+}

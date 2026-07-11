@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/TusharChauhan09/SwipePay-api/internal/auth"
 	db "github.com/TusharChauhan09/SwipePay-api/internal/db/generated"
@@ -44,11 +45,13 @@ func (h *Handler) CreateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	avatarUrl := pgtype.Text{String: req.AvatarURL, Valid: req.AvatarURL != ""}
+
 	user, err := h.queries.CreateUser(r.Context(), db.CreateUserParams{
 		WalletAddress: walletAddress,
 		Username:      req.Username,
 		DisplayName:   req.DisplayName,
-		AvatarUrl:     &req.AvatarURL,
+		AvatarUrl:     avatarUrl,
 	})
 	if err != nil {
 		http.Error(w, "failed to create profile", http.StatusInternalServerError)
@@ -90,10 +93,12 @@ func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	avatarUrl := pgtype.Text{String: req.AvatarURL, Valid: req.AvatarURL != ""}
+
 	user, err := h.queries.UpdateUserProfile(r.Context(), db.UpdateUserProfileParams{
 		WalletAddress: walletAddress,
 		DisplayName:   req.DisplayName,
-		AvatarUrl:     &req.AvatarURL,
+		AvatarUrl:     avatarUrl,
 	})
 	if err != nil {
 		http.Error(w, "failed to update profile", http.StatusInternalServerError)
