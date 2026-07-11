@@ -27,6 +27,24 @@ type CreateProfileRequest struct {
 	AvatarURL   string `json:"avatar_url"`
 }
 
+func (h *Handler) SearchUsers(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query().Get("q")
+	if query == "" {
+		http.Error(w, "query parameter 'q' is required", http.StatusBadRequest)
+		return
+	}
+
+	searchTerm := pgtype.Text{String: query, Valid: true}
+	users, err := h.queries.SearchUsersByUsername(r.Context(), searchTerm)
+	if err != nil {
+		http.Error(w, "search failed", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(users)
+}
+
 func (h *Handler) CreateProfile(w http.ResponseWriter, r *http.Request) {
 	walletAddress, ok := auth.GetWalletFromContext(r)
 	if !ok {

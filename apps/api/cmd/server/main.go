@@ -13,7 +13,9 @@ import (
 
 	"github.com/TusharChauhan09/SwipePay-api/internal/auth"
 	"github.com/TusharChauhan09/SwipePay-api/internal/db"
+
 	"github.com/TusharChauhan09/SwipePay-api/internal/profile"
+	"github.com/TusharChauhan09/SwipePay-api/internal/split"
 )
 
 func main() {
@@ -50,7 +52,20 @@ func main() {
 		r.Put("/profile", profileHandler.UpdateProfile)
 	})
 
+	// user search
+	r.Get("/user/search",profileHandler.SearchUsers)
 
-	fmt.Println("SolPay API starting on :8080...")
+	// Public split lookup (so a scanned QR/link can show split details before paying)
+	splitHandler := split.NewHandler(pool)
+	r.Get("/splits/{id}", splitHandler.GetSplit)
+
+	r.Group(func(r chi.Router) {
+		r.Use(auth.RequireAuth)
+		r.Post("/splits", splitHandler.CreateSplit)
+		r.Get("/splits", splitHandler.GetMySplits)
+	})
+
+
+	fmt.Println("Swipe API starting on :8080...")
 	http.ListenAndServe(":8080", r)
 }
